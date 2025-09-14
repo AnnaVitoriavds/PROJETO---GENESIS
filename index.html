@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Projeto Gênesis v5.0 (Edição Mestre)</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --background: #0a0a0a;
+            --text: #00ff41;
+            --prompt: #72f1b8;
+            --highlight: #f0f0f0;
+            --error: #ff5555;
+            --success: #a6e22e;
+            --locked: #777;
+            --link: #66d9ef; /* Cor para links */
+            --code-bg: #111;
+            --code-border: #333;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--background);
+            color: var(--text);
+            font-family: 'VT323', monospace;
+            font-size: 1.3rem;
+            line-height: 1.6;
+        }
+
+        #terminal {
+            width: 98%;
+            max-width: 900px;
+            height: 95vh;
+            margin: 2.5vh auto;
+            border: 1px solid #333;
+            padding: 10px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #output {
+            flex-grow: 1;
+            white-space: pre-wrap; 
+        }
+        
+        #output .code-block {
+            background-color: var(--code-bg);
+            border: 1px solid var(--code-border);
+            padding: 10px;
+            margin: 10px 0;
+            white-space: pre;
+            overflow-x: auto;
+        }
+
+        #output a {
+            color: var(--link);
+            text-decoration: underline;
+        }
+
+        #output .command-history {
+            color: var(--highlight);
+            opacity: 0.8;
+        }
+
+        #output .system-message {
+            color: var(--highlight);
+            font-style: italic;
+        }
+
+        #output .error-message {
+            color: var(--error);
+            background-color: #3d1515;
+        }
+
+        #output .success-message {
+            color: var(--success);
+        }
+        #output .locked-message {
+            color: var(--locked);
+        }
+
+
+        .prompt-line {
+            display: flex;
+            align-items: center;
+        }
+
+        #prompt-user {
+            color: var(--prompt);
+            margin-right: 8px;
+            white-space: nowrap;
+        }
+
+        #input {
+            background: transparent;
+            border: none;
+            color: var(--text);
+            font-family: inherit;
+            font-size: inherit;
+            width: 100%;
+            outline: none;
+            text-shadow: 0 0 5px var(--text);
+        }
+
+        #input::after {
+            content: '█';
+            animation: blink 1s step-end infinite;
+        }
+
+        @keyframes blink {
+            50% {
+                opacity: 0;
+            }
+        }
+
+        /* --- ESTILO DO CERTIFICADO --- */
+        #certificate-container { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
+        #certificate { background: #f4f4f4; color: #333; width: 800px; height: 565px; padding: 40px; border: 10px solid var(--prompt); text-align: center; font-family: 'Times New Roman', serif; }
+        .cert-header h1 { font-size: 2.5rem; color: #111; margin: 0; }
+        .cert-header h2 { font-size: 1.5rem; color: var(--background); margin: 5px 0 30px 0; }
+        .cert-body p { font-size: 1.2rem; }
+        #cert-name { font-size: 2.8rem; color: var(--prompt); font-family: 'Brush Script MT', cursive; margin: 20px 0; }
+        .skills { font-weight: bold; font-style: italic; color: #555; margin: 30px 0; }
+        .cert-footer { margin-top: 50px; }
+        .cert-footer p { margin: 0; font-size: 1rem; }
+        #print-button { margin-top: 20px; padding: 10px 20px; font-family: 'VT323', monospace; font-size: 1.2rem; background: var(--prompt); color: var(--background); border: none; cursor: pointer; }
+    </style>
+    </head>
+<body>
+    <div id="terminal">
+        <div id="output"></div>
+        <div class="prompt-line">
+            <span id="prompt-user">></span>
+            <input type="text" id="input" autofocus />
+        </div>
+    </div>
+
+    <div id="certificate-container" style="display: none;">
+        <div id="certificate">
+            <div class="cert-header">
+                <h1>Certificado de Conclusão</h1>
+                <h2>Projeto Gênesis</h2>
+            </div>
+            <div class="cert-body">
+                <p>Este certificado atesta que o(a) agente</p>
+                <h2 id="cert-name"></h2>
+                <p>concluiu com sucesso o treinamento de desenvolvimento web, dominando as artes de:</p>
+                <p class="skills">Infiltração (HTML) - Camuflagem (CSS) - Manipulação (JS)</p>
+                <p>Sua dedicação e habilidade foram notáveis.</p>
+            </div>
+            <div class="cert-footer">
+                <p>_________________________</p>
+                <p><strong>Vivi</strong></p>
+                <p>Coordenadora de Operações</p>
+            </div>
+        </div>
+        <button id="print-button">Imprimir ou Salvar como PDF</button>
+    </div>
+
+    <script>
+        // --- ELEMENTOS DO DOM ---
+        const outputDiv = document.getElementById('output');
+        const inputCmd = document.getElementById('input');
+        const terminalDiv = document.getElementById('terminal');
+        const promptUser = document.getElementById('prompt-user');
+        const certificateContainer = document.getElementById('certificate-container');
+        const certName = document.getElementById('cert-name');
+        const printButton = document.getElementById('print-button');
+
+        // --- ESTADO DO JOGO ---
+        let gameState = {
+            screen: 'prompt_user',
+            loginAttempt: { username: '' },
+            loggedInUser: null,
+            currentCourse: null,
+            currentModuleIndex: null,
+            progress: {},
+        };
+
+        // --- CURRÍCULO COMPLETO DO CURSO V5.0 ---
+        const courseData = {
+            html: [
+                {
+                    title: "Estrutura Básica",
+                    content: `Toda página web é um documento de texto com uma estrutura rígida, como um esqueleto. Se a estrutura estiver errada, tudo desmorona. As tags principais são a fundação de tudo.
+<br>
+<b>&lt;!DOCTYPE html&gt;</b>: Esta é a primeira linha de qualquer arquivo HTML. É uma instrução que informa ao navegador: "Atenção, o código a seguir é HTML5, a versão mais moderna. Prepare-se para renderizá-lo corretamente."
+<b>&lt;html&gt;</b>: Esta é a tag raiz, a mãe de todas as outras. Todo o seu código, sem exceção, deve estar dentro dela.
+<b>&lt;head&gt;</b>: A 'sala de controle' da sua página. O conteúdo aqui dentro não é visível diretamente no site, mas contém informações cruciais para o navegador, como o título da aba, a codificação de caracteres (para acentos e símbolos funcionarem) e links para arquivos CSS.
+<b>&lt;body&gt;</b>: Aqui é onde a mágica acontece. Todo o conteúdo que o usuário vê - textos, imagens, vídeos, botões - deve ser colocado dentro da tag &lt;body&gt;.
+<br>
+EXEMPLO PRÁTICO:
+<div class='code-block'>&lt;!DOCTYPE html&gt;
+&lt;html lang="pt-br"&gt;
+  &lt;head&gt;
+    &lt;meta charset="UTF-8"&gt;
+    &lt;title&gt;Minha Primeira Missão&lt;/title&gt;
+  &lt;/head&gt;
+  &lt;body&gt;
+    &lt;h1&gt;Iniciando Protocolo...&lt;/h1&gt;
+    &lt;p&gt;Sistema online.&lt;/p&gt;
+  &lt;/body&gt;
+&lt;/html&gt;</div>
+<br>
+SUGESTÃO DE VÍDEO PARA REFORÇO:
+Assista: <a href="https://www.youtube.com/watch?v=E6CdIawPTh0" target="_blank">Seu primeiro código HTML - Curso em Vídeo</a>`,
+                    passingScore: 4,
+                    questionPool: [{ q: "Qual tag é a raiz de todo documento HTML?", a: "html" }, { q: "Onde ficam os metadados da página, como o `<title>`?", a: "head" }, { q: "Qual tag contém todo o conteúdo visível?", a: "body" }, { q: "Qual declaração informa ao navegador que o documento é HTML5?", a: "doctype" }, { q: "Onde você colocaria um parágrafo de texto?", a: "body" }]
+                },
+                {
+                    title: "Textos e Títulos",
+                    content: `A informação é poder, e na web ela é majoritariamente textual. Estruturar o texto com as tags corretas não é apenas sobre aparência, é sobre dar significado (semântica) ao conteúdo, o que ajuda navegadores e buscadores a entenderem sua página.
+<br>
+<b>&lt;h1&gt; a &lt;h6&gt;</b>: São os títulos (headings). Pense neles como a hierarquia de um documento. &lt;h1&gt; é o título principal da página (use apenas um por página). &lt;h2&gt; são os subtítulos, &lt;h3&gt; são sub-seções dos &lt;h2&gt;, e assim por diante.
+<b>&lt;p&gt;</b>: A tag de parágrafo. Use-a para blocos de texto.
+<b>&lt;strong&gt;</b>: Indica que o texto tem grande importância ou urgência. Os navegadores geralmente o deixam em negrito.
+<b>&lt;em&gt;</b>: Indica uma ênfase no texto, como se você estivesse mudando o tom de voz. Geralmente renderizado em itálico.
+<b>&lt;br&gt;</b>: Uma quebra de linha forçada. Use com moderação.
+<br>
+EXEMPLO PRÁTICO:
+<div class='code-block'>&lt;h1&gt;Relatório da Missão Alfa&lt;/h1&gt;
+&lt;p&gt;O alvo foi infiltrado com sucesso. A informação crucial foi extraída e está detalhada abaixo.&lt;/p&gt;
+&lt;h2&gt;Dados Extraídos&lt;/h2&gt;
+&lt;p&gt;A senha principal é &lt;strong&gt;Matrix123&lt;/strong&gt;. Repito, a senha é &lt;em&gt;extremamente&lt;/em&gt; sensível.&lt;/p&gt;</div>
+<br>
+SUGESTÃO DE VÍDEO PARA REFORÇO:
+Assista: <a href="https://www.youtube.com/watch?v=T-d_hsO3hUI" target="_blank">Parágrafos e Quebras - Curso em Vídeo</a>`,
+                    passingScore: 4,
+                    questionPool: [{ q: "Qual a tag para o título de maior importância?", a: "h1" }, { q: "Qual a tag para um parágrafo?", a: "p" }, { q: "Para indicar texto de grande importância (negrito), usamos `<b>` ou `<strong>`?", a: "strong" }, { q: "Para dar ênfase a uma palavra (itálico), qual a tag semântica correta?", a: "em" }, { q: "Quantos níveis de títulos (h) existem?", a: "6" }]
+                },
+                {
+                    title: "Listas e Links",
+                    content: `A web é uma teia de informações interconectadas. Os links (âncoras) são os fios dessa teia, e as listas organizam os dados de forma clara.
+<br>
+<b>&lt;a&gt;</b>: A tag de âncora, usada para criar links.
+  - <b>href</b> (Hypertext Reference): Este atributo é essencial e define a URL de destino do link.
+  - <b>target="_blank"</b>: Um atributo útil que faz o link abrir em uma nova aba, mantendo sua página aberta.
+<b>&lt;ul&gt;</b>: Lista Não Ordenada (Unordered List). Usada quando a ordem dos itens não importa. Usa marcadores como bolinhas.
+<b>&lt;ol&gt;</b>: Lista Ordenada (Ordered List). Usada quando a sequência é importante. Usa números.
+<b>&lt;li&gt;</b>: Item de Lista (List Item). Cada item, tanto em &lt;ul&gt; quanto em &lt;ol&gt;, deve estar dentro de uma tag &lt;li&gt;.
+<br>
+EXEMPLO PRÁTICO:
+<div class='code-block'>&lt;h3&gt;Ferramentas Necessárias:&lt;/h3&gt;
+&lt;ul&gt;
+  &lt;li&gt;Computador com acesso à internet&lt;/li&gt;
+  &lt;li&gt;Editor de código&lt;/li&gt;
+  &lt;li&gt;Café&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h3&gt;Plano de Infiltração:&lt;/h3&gt;
+&lt;ol&gt;
+  &lt;li&gt;Passo 1: Estudar o alvo.&lt;/li&gt;
+  &lt;li&gt;Passo 2: Obter credenciais.&lt;/li&gt;
+  &lt;li&gt;Passo 3: Acessar o sistema.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Para mais informações, acesse o &lt;a href="https://www.google.com" target="_blank"&gt;briefing completo&lt;/a&gt;.&lt;/p&gt;</div>
+<br>
+SUGESTÃO DE VÍDEO PARA REFORÇO:
+Assista: <a href="https://www.youtube.com/watch?v=JlE0Kbdv0_s" target="_blank">Listas HTML - Curso em Vídeo</a>`,
+                    passingScore: 4,
+                    questionPool: [{ q: "Qual tag cria um link?", a: "a" }, { q: "Qual atributo define o destino de um link?", a: "href" }, { q: "Qual tag cria uma lista com marcadores (bolinhas)?", a: "ul" }, { q: "Qual tag cria uma lista com números?", a: "ol" }, { q: "Qual tag é usada para cada item dentro de uma lista?", a: "li" }]
+                },
+                {
+                    title: "Imagens e Mídia",
+                    content: `Uma interface visualmente rica é mais eficaz. O HTML permite incorporar imagens e outras mídias de forma nativa.
+<br>
+<b>&lt;img&gt;</b>: A tag para inserir imagens. É uma tag "vazia", o que significa que não precisa de uma tag de fechamento como &lt;/img&gt;.
+  - <b>src</b> (Source): O atributo mais importante, define o caminho (URL) para o arquivo de imagem. Pode ser um link externo ou um arquivo local.
+  - <b>alt</b> (Alternative Text): Este atributo é OBRIGATÓRIO. Ele fornece uma descrição textual da imagem. É vital para a acessibilidade (leitores de tela para deficientes visuais) e também é exibido se a imagem não carregar.
+<br>
+<b>&lt;video&gt;</b> e <b>&lt;audio&gt;</b>: Permitem incorporar players de vídeo e áudio.
+  - <b>src</b>: Similar à tag de imagem, aponta para o arquivo de mídia.
+  - <b>controls</b>: Este atributo booleano (não precisa de valor) exibe os controles padrão do player (play, pause, volume, etc.).
+<br>
+EXEMPLO PRÁTICO:
+<div class='code-block'>&lt;h2&gt;Diagrama da Rede Alvo&lt;/h2&gt;
+&lt;img src="diagrama.png" alt="Fluxograma da arquitetura de rede do servidor alvo"&gt;
+
+&lt;h2&gt;Gravação de Áudio Interceptada&lt;/h2&gt;
+&lt;audio src="conversa.mp3" controls&gt;&lt;/audio&gt;</div>
+<br>
+SUGESTÃO DE VÍDEO PARA REFORÇO:
+Assista: <a href="https://www.youtube.com/watch?v=jgrem_mab08" target="_blank">Imagens e Favicon - Curso em Vídeo</a>`,
+                    passingScore: 4,
+                    questionPool: [{ q: "Qual tag é usada para exibir uma imagem?", a: "img" }, { q: "Qual atributo define o caminho da imagem?", a: "src" }, { q: "Qual atributo obrigatório descreve a imagem para acessibilidade?", a: "alt" }, { q: "Qual tag é usada para incorporar vídeos?", a: "video" }, { q: "Qual atributo adiciona controles de play/pause a um vídeo ou áudio?", a: "controls" }]
+                },
+                {
+                    title: "Tabelas",
+                    content: `Tabelas são para exibir dados que fazem sentido em formato de linhas e colunas, como uma planilha. Não devem ser usadas para criar o layout de uma página (essa é uma prática antiga e errada).
+<br>
+A estrutura é hierárquica:
+<b>&lt;table&gt;</b>: O contêiner que envolve toda a tabela.
+  <b>&lt;tr&gt;</b> (Table Row): Define uma linha dentro da tabela.
+    <b>&lt;th&gt;</b> (Table Header): Define uma célula de cabeçalho. O texto fica em negrito e centralizado por padrão. Use-a na primeira linha para nomear as colunas.
+    <b>&lt;td&gt;</b> (Table Data): Define uma célula de dados padrão.
+<br>
+Para tabelas grandes, é uma boa prática agrupar o cabeçalho e o corpo com <b>&lt;thead&gt;</b> e <b>&lt;tbody&gt;</b>.
+<br>
+EXEMPLO PRÁTICO:
+<div class='code-block'>&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th&gt;IP do Alvo&lt;/th&gt;
+      &lt;th&gt;Porta&lt;/th&gt;
+      &lt;th&gt;Status&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td&gt;192.168.1.1&lt;/td&gt;
+      &lt;td&gt;80&lt;/td&gt;
+      &lt;td&gt;Aberta&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;192.168.1.2&lt;/td&gt;
+      &lt;td&gt;443&lt;/td&gt;
+      &lt;td&gt;Fechada&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;</div>
+<br>
+SUGESTÃO DE VÍDEO PARA REFORÇO:
+Assista: <a href="https://www.youtube.com/watch?v=c7My-5p_iGk" target="_blank">Tabelas em HTML - Curso em Vídeo</a>`,
+                    passingScore: 4,
+                    questionPool: [{ q: "Qual tag inicia a criação de uma tabela?", a: "table" }, { q: "Qual tag define uma linha na tabela?", a: "tr" }, { q: "Qual tag é usada para uma célula de cabeçalho?", a: "th" }, { q: "Qual tag é usada para uma célula de dados normal?", a: "td" }, { q: "Para agrupar o corpo da tabela, qual tag pode ser usada?", a: "tbody" }]
+                },
+                {
+                    title: "Formulários",
+                    content: `Formulários são o principal método de interação e coleta de dados do usuário. Desde uma simples barra de busca até uma tela de login complexa, tudo começa com a tag &lt;form&gt;.
+<br>
+<b>&lt;form&gt;</b>: O contêiner que agrupa todos os campos do formulário.
+<b>&lt;label&gt;</b>: Uma etiqueta de texto descritiva para um campo. É crucial para acessibilidade. O atributo <b>for</b> da label deve ser igual ao <b>id</b> do campo para conectá-los.
+<b>&lt;input&gt;</b>: A tag mais versátil de todas. O atributo <b>type</b> muda completamente seu comportamento:
+  - <b>type="text"</b>: Campo de texto de uma linha.
+  - <b>type="password"</b>: Campo de senha, esconde os caracteres.
+  - <b>type="email"</b>: Campo de texto que espera um formato de e-mail.
+  - <b>type="submit"</b>: Cria um botão que envia o formulário.
+<b>&lt;textarea&gt;</b>: Para campos de texto de múltiplas linhas, como uma caixa de comentários.
+<br>
+EXEMPLO PRÁTICO:
+<div class='code-block'>&lt;form&gt;
+  &lt;h3&gt;Acesso ao Sistema&lt;/h3&gt;
+
+  &lt;label for="agente"&gt;ID do Agente:&lt;/label&gt;
+  &lt;input type="text" id="agente" name="id_agente" placeholder="Ex: 007"&gt;
+  &lt;br&gt;&lt;br&gt;
+
+  &lt;label for="senha"&gt;Senha de Acesso:&lt;/label&gt;
+  &lt;input type="password" id="senha" name="senha_agente"&gt;
+  &lt;br&gt;&lt;br&gt;
+
+  &lt;input type="submit" value="Autenticar"&gt;
+&lt;/form&gt;</div>
+<br>
+SUGESTÃO DE VÍDEO PARA REFORÇO:
+Assista: <a href="https://www.youtube.com/watch?v=IWTfgTXyChQ" target="_blank">Formulários em HTML - Curso em Vídeo</a>`,
+                    passingScore: 4,
+                    questionPool: [{ q: "Qual tag principal envolve um formulário?", a: "form" }, { q: "Qual tag é usada para campos de entrada de dados?", a: "input" }, { q: "Qual tipo de input esconde os caracteres digitados?", a: "password" }, { q: "Qual tipo de input cria um botão de envio?", a: "submit" }, { q: "Qual tag é usada para criar uma etiqueta para um campo?", a: "label" }]
+                }
+            ],
+            css: [
+                {
+                    title: "Introdução e Seletores",
+                    content: `CSS (Cascading Style Sheets) é a linguagem de camuflagem. Ela descreve como os elementos HTML devem ser exibidos na tela. A "cascata" (Cascading) refere-se à ordem de prioridade das regras.
+<br>
+A sintaxe fundamental é: <b>seletor { propriedade: valor; }</b>.
+<br>
+- <b>Seletor</b>: O padrão que o CSS usa para encontrar o(s) elemento(s) HTML que você quer estilizar.
+- <b>Propriedade</b>: O que você quer mudar (cor, tamanho, etc.).
+- <b>Valor</b>: O novo estilo que você quer aplicar.
+<br>
+TIPOS DE SELETORES:
+- <b>Tag</b>: Seleciona todos os elementos de um tipo. Ex: <code>p { color: white; }</code>
+- <b>Classe</b>: Seleciona elementos que têm um atributo <code>class</code>. É reutilizável. Ex: <code>.alerta { background-color: red; }</code>
+- <b>ID</b>: Seleciona UM ÚNICO elemento que tem um atributo <code>id</code>. O ID deve ser único na página. Ex: <code>#menu-principal { width: 100%; }</code>
+<br>
+EXEMPLO PRÁTICO:
+<div class='code-block'>/* Estilo geral para todos os parágrafos */
+p {
+  font-family: monospace;
+  color: lightgray;
+}
+
+/* Um estilo específico para mensagens de erro */
+.mensagem-erro {
+  color: red;
+  font-weight: bold;
+}
+
+/* Estilo para o contêiner principal da interface */
+#container-terminal {
+  border: 1px solid green;
+}</div>
+<br>
+SUGESTÃO DE VÍDEO PARA REFORÇO:
+Assista: <a href="https://www.youtube.com/watch?v=n0S62_sI_d4" target="_blank">O que é CSS? - Curso em Vídeo</a>`,
+                    passingScore: 4,
+                    questionPool: [{ q: "Qual caractere prefixa um seletor de classe?", a: "." }, { q: "Qual caractere prefixa um seletor de ID?", a: "#" }, { q: "Qual propriedade CSS altera a cor do texto?", a: "color" }, { q: "Um ID pode ser usado em vários elementos na mesma página?", a: "nao" }, { q: "Uma classe pode ser usada em vários elementos?", a: "sim" }]
+                },
+                {
+                    title: "O Box Model",
+                    content: `Para o CSS, todo elemento na tela é uma caixa retangular. Entender como essa caixa é construída e calculada é a chave para dominar layouts. O Box Model é composto por 4 camadas, de dentro para fora:
+<br>
+1. <b>Content</b>: O conteúdo real (texto, imagem, vídeo). Suas dimensões são definidas por <code>width</code> e <code>height</code>.
+2. <b>Padding</b>: Uma área de respiro transparente ao redor do conteúdo. É o espaçamento interno.
+3. <b>Border</b>: A borda que envolve o padding e o conteúdo. Pode ter espessura, estilo (sólida, pontilhada) e cor.
+4. <b>Margin</b>: Uma área transparente que empurra os outros elementos para longe. É o espaçamento externo.
+<br>
+O tamanho total ocupado por um elemento é a soma de todas essas partes.
+<br>
+EXEMPLO PRÁTICO:
+<div class='code-block'>.caixa-info {
+  /* 1. Conteúdo */
+  width: 300px;
+  background-color: #1a1a1a;
+
+  /* 2. Espaçamento Interno */
+  padding: 15px;
+
+  /* 3. Borda */
+  border: 1px solid #00ff41;
+
+  /* 4. Espaçamento Externo */
+  margin: 20px;
+}</div>
+<br>
+SUGESTÃO DE VÍDEO PARA REFORÇO:
+Assista: <a href="https://www.youtube.com/watch?v=SPHTML-sQ-w" target="_blank">Modelo de Caixas - Curso em Vídeo</a>`,
+                    passingScore: 4,
+                    questionPool: [{ q: "Qual propriedade define o espaçamento INTERNO de uma caixa?", a: "padding" }, { q: "Qual propriedade define o espaçamento EXTERNO de uma caixa?", a: "margin" }, { q: "Qual propriedade define a linha ao redor do padding?", a: "border" }, { q: "As 4 camadas do Box Model são Content, Padding, Border e ...?", a: "margin" }, { q: "A propriedade `width` define a largura de qual parte do Box Model?", a: "content" }]
+                },
+                {
+                    title: "Cores e Backgrounds",
+                    content: `As cores e imagens de fundo são fundamentais para criar a atmosfera de uma interface.
+<br>
+<b>color</b>: Define a cor do texto (foreground color).
+<b>background-color</b>: Define uma cor de fundo sólida.
+<b>background-image</b>: Permite usar uma imagem como fundo. Use <code>url('caminho/para/imagem.jpg')</code>.
+<b>background-repeat</b>: Controla se a imagem de fundo se repete (<code>no-repeat</code>, <code>repeat-x</code>, etc.).
+<b>background-position</b>: Alinha a imagem de fundo (<code>center</code>, <code>top left</code>, etc.).
+<b>background-size</b>: Controla o tamanho da imagem (<code>cover</code> para preencher tudo, <code>contain</code> para garantir que seja totalmente visível).
+<br>
+Formatos de cor mais comuns:
+- <b>Hexadecimal</b>: <code>#RRGGBB</code> (ex: <code>#00ff41</code>).
+- <b>RGB/RGBA</b>: <code>rgb(0, 255, 65)</code> ou com transparência <code>rgba(0, 255, 65, 0.5)</code>.
+<br>
+EXEMPLO PRÁTICO:
+<div class='code-block'>body {
+  background-color: #000;
+  background-image: url('matrix-background.gif');
+  background-repeat: no-repeat;
+  background-size: cover; /* Faz a imagem cobrir todo o fundo */
+  color: #00ff41; /* Cor do texto padrão */
+}</div>
+<br>
+SUGESTÃO DE VÍDEO PARA REFORÇO:
+Assista: <a href="https://www.youtube.com/watch?v=E2gaDa4_g_M" target="_blank">Representando Cores com CSS - Curso em Vídeo</a>`,
+                    passingScore: 4,
+                    questionPool: [{ q: "Qual propriedade muda a cor do texto?", a: "color" }, { q: "Qual formato de cor usa um # seguido de 6 caracteres?", a: "hexadecimal" }, { q: "Na sigla RGBA, o que o 'A' representa?", a: "alpha" }, { q: "Qual propriedade permite colocar uma imagem de fundo?", a: "background-image" }, { q: "Qual valor de `background-size` faz a imagem de fundo cobrir todo o espaço disponível?", a: "cover" }]
+                },
+                {
+                    title: "Tipografia na Web",
+                    content: `A forma como o texto é apresentado (tipografia) afeta diretamente a experiência do usuário. Um texto legível e bem estilizado transmite profissionalismo.
+<br>
+<b>font-family</b>: Define a lista de fontes a serem usadas. O navegador tentará a primeira, se não encontrar, tentará a segunda, e assim por diante. Termine com uma família genérica como <code>sans-serif</code> ou <code>monospace</code>.
+<b>font-size</b>: O tamanho do texto. Unidades comuns são <code>px</code> (pixels), <code>em</code> (relativo ao tamanho da fonte do elemento pai) e <code>rem</code> (relativo ao tamanho da fonte da raiz do documento).
+<b>font-weight</b>: O "peso" ou espessura da fonte. Valores comuns são <code>normal</code> (400) e <code>bold</code> (700).
+<b>text-align</b>: Alinha o texto horizontalmente dentro de seu contêiner (<code>left</code>, <code>center</code>, <code>right</code>, <code>justify</code>).
+<b>line-height</b>: Controla o espaço vertical entre as linhas de texto, melhorando a legibilidade. Um valor de <code>1.5</code> é um bom ponto de partida.
+<br>
+EXEMPLO PRÁTICO:
+<div class='code-block'>.relatorio-confidencial {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 16px;
+  line-height: 1.6;
+  text-align: left;
+}
+
+.relatorio-confidencial .titulo {
+  font-size: 24px;
+  font-weight: bold;
+  text-align: center;
+}</div>
+<br>
+SUGESTÃO DE VÍDEO PARA REFORÇO:
+Assista: <a href="https://www.youtube.com/watch?v=d_kSgV5d_cc" target="_blank">Famílias de Fonte com CSS - Curso em Vídeo</a>`,
+                    passingScore: 4,
+                    questionPool: [{ q: "Qual propriedade define a família da fonte?", a: "font-family" }, { q: "Qual propriedade define o tamanho do texto?", a: "font-size" }, { q: "Qual propriedade deixa o texto em negrito?", a: "font-weight" }, { q: "Qual valor de `text-align` centraliza o texto?", a: "center" }, { q: "Qual propriedade controla o espaço entre as linhas de um parágrafo?", a: "line-height" }]
+                },
+                {
+                    title: "Layout com Flexbox",
+                    content: `Flexbox é um modelo de layout unidimensional projetado para organizar, alinhar e distribuir espaço entre itens em um contêiner. É a ferramenta moderna padrão para a maioria das tarefas de layout.
+<br>
+Para usá-lo, você define <code>display: flex;</code> no elemento pai (o contêiner). A partir daí, os filhos diretos se tornam "flex items".
+<br>
+PROPRIEDADES DO PAI (CONTÊINER):
+- <b>flex-direction</b>: Define a direção do eixo principal (<code>row</code> - horizontal, ou <code>column</code> - vertical).
+- <b>justify-content</b>: Alinha os itens ao longo do eixo principal. Valores: <code>flex-start</code>, <code>center</code>, <code>flex-end</code>, <code>space-between</code>, <code>space-around</code>.
+- <b>align-items</b>: Alinha os itens ao longo do eixo secundário (o eixo perpendicular ao principal).
+<br>
+EXEMPLO PRÁTICO (um menu de navegação):
+<div class='code-block'>.menu-nav {
+  display: flex;
+  justify-content: space-around; /* Espaço igual entre os itens */
+  align-items: center; /* Alinha verticalmente no centro */
+  background-color: #111;
+  padding: 10px;
+}
+
+.menu-nav a {
+  color: #00ff41;
+  text-decoration: none;
+}</div>
+<br>
+SUGESTÃO DE VÍDEO PARA REFORÇO:
+Assista: <a href="https://www.youtube.com/watch?v=L_RQLo1iTfA" target="_blank">Primeiros Passos com Flexbox - Curso em Vídeo</a>`,
+                    passingScore: 4,
+                    questionPool: [{ q: "Qual valor de `display` ativa o Flexbox em um contêiner?", a: "flex" }, { q: "Qual propriedade alinha itens horizontalmente (no eixo principal padrão)?", a: "justify-content" }, { q: "Qual propriedade alinha itens verticalmente (no eixo secundário padrão)?", a: "align-items" }, { q: "O valor `space-between` para `justify-content` coloca espaço entre os itens ou ao redor deles?", a: "entre" }, { q: "Para empilhar os itens verticalmente, qual valor usamos em `flex-direction`?", a: "column" }]
+                },
+                {
+                    title: "Pseudo-classes e Transições",
+                    content: `CSS não é estático. Ele pode reagir a estados e interações do usuário através de pseudo-classes, e podemos animar essas mudanças de estado com transições.
+<br>
+<b>Pseudo-classes</b>: São palavras-chave adicionadas a seletores que especificam um estado especial do elemento selecionado.
+  - <b>:hover</b>: Aplica o estilo quando o ponteiro do mouse está sobre o elemento.
+  - <b>:focus</b>: Aplica o estilo quando o elemento está em foco (ex: um campo de formulário selecionado).
+  - <b>:nth-child(n)</b>: Seleciona elementos com base em sua posição entre os irmãos (ex: <code>:nth-child(2)</code> para o segundo filho).
+<br>
+<b>Transições</b>: Tornam as mudanças de propriedade suaves em vez de instantâneas.
+  - <b>transition</b>: Uma propriedade shorthand para <code>transition-property</code>, <code>transition-duration</code>, <code>transition-timing-function</code>.
+<br>
+EXEMPLO PRÁTICO (um botão que muda de cor suavemente):
+<div class='code-block'>.botao-acao {
+  background-color: #008f25;
+  color: white;
+  padding: 15px;
+  border: none;
+  cursor: pointer;
+  /* A transição é definida no estado base do elemento */
+  transition: background-color 0.4s ease;
+}
+
+/* O :hover define apenas o estado final da animação */
+.botao-acao:hover {
+  background-color: #00ff41;
+}</div>
+<br>
+SUGESTÃO DE VÍDEO PARA REFORÇO:
+Assista: <a href="https://www.youtube.com/watch?v=3-h9A-nsswA" target="_blank">Pseudo-classes em CSS - Curso em Vídeo</a>`,
+                    passingScore: 4,
+                    questionPool: [{ q: "Qual pseudo-classe é ativada quando o mouse passa sobre um elemento?", a: "hover" }, { q: "Qual propriedade usamos para animar suavemente a mudança de um estilo?", a: "transition" }, { q: "Em qual estado do elemento (base ou :hover) devemos definir a propriedade `transition`?", a: "base" }, { q: "A transição `transition: all 0.5s` dura quantos segundos?", a: "0.5" }, { q: "Qual pseudo-classe se aplica a um campo de formulário que está selecionado?", a: "focus" }]
+                }
+            ],
+            js: [
+                {
+                    title: "Variáveis e Tipos de Dados",
+                    content: `JavaScript é o cérebro da operação, a linguagem que adiciona lógica e interatividade. Tudo começa com o armazenamento de dados.
+<br>
+<b>Variáveis</b> são como caixas etiquetadas onde guardamos informações.
+- <b>let</b>: Usada para declarar variáveis cujo valor pode ser alterado posteriormente.
+- <b>const</b>: Usada para declarar constantes, ou seja, variáveis cujo valor não pode ser alterado após a atribuição inicial. É uma boa prática usar <code>const</code> sempre que possível.
+<br>
+<b>Tipos de Dados Primitivos</b>:
+- <b>String</b>: Sequências de texto, sempre entre aspas (simples '' ou duplas ""). Ex: <code>'Senha Secreta'</code>.
+- <b>Number</b>: Qualquer tipo de número, seja inteiro ou decimal. Ex: <code>1337</code>, <code>3.14</code>.
+- <b>Boolean</b>: Representa um valor lógico de verdadeiro (<code>true</code>) ou falso (<code>false</code>).
+- <b>undefined</b>: Uma variável que foi declarada mas ainda não teve um valor atribuído.
+<br>
+EXEMPLO PRÁTICO:
+<div class='code-block'>// Usando let porque o nível pode mudar
+let nivelAcesso = 4;        
+
+// Usando const porque o nome não muda
+const nomeAgente = 'Vivi';
+
+const missaoAtiva = true;  // um booleano
+
+nivelAcesso = 5; // O valor de 'let' pode ser atualizado
+// NOME_AGENTE = "Outro"; // Isso geraria um erro!
+
+// console.log() é sua principal ferramenta de depuração.
+console.log("Status do Agente:", nomeAgente);</div>
+<br>
+SUGESTÃO DE VÍDEO PARA REFORÇO:
+Assista: <a href="https://www.youtube.com/watch?v=Vbabsye7mWo" target="_blank">Variáveis e Dados - Curso em Vídeo</a>`,
+                    passingScore: 4,
+                    questionPool: [{ q: "Qual palavra-chave declara uma variável que não pode ser reatribuída?", a: "const" }, { q: "Qual comando exibe mensagens no console do navegador?", a: "console.log" }, { q: "Qual tipo de dado representa texto?", a: "string" }, { q: "Qual tipo de dado representa verdadeiro ou falso?", a: "boolean" }, { q: "Qual a palavra-chave para declarar uma variável que PODE ser reatribuída?", a: "let" }]
+                },
+                {
+                    title: "Manipulação do DOM",
+                    content: `O DOM (Document Object Model) é a ponte entre o seu HTML e o seu JavaScript. O navegador cria uma árvore de objetos a partir do seu código HTML, e o JS pode acessar e modificar essa árvore para alterar o que é exibido na página em tempo real.
+<br>
+<b>1. Selecionando Elementos:</b>
+- <b>document.getElementById('id-do-elemento')</b>: O mais rápido e específico. Seleciona o elemento pelo seu <code>id</code>.
+- <b>document.querySelector('seletor-css')</b>: Mais versátil. Seleciona o PRIMEIRO elemento que corresponde ao seletor CSS fornecido (ex: <code>'.minha-classe'</code>, <code>'h1'</code>, <code>'#meu-id'</code>).
+<br>
+<b>2. Modificando Elementos:</b>
+- <b>.textContent</b>: Altera apenas o conteúdo textual de um elemento. É mais seguro e performático.
+- <b>.innerHTML</b>: Altera todo o HTML dentro de um elemento. Cuidado, pois pode levar a vulnerabilidades se usado com dados do usuário.
+- <b>.style.propriedadeCss</b>: Acessa e altera o CSS inline do elemento. Ex: <code>.style.color = 'red'</code>.
+- <b>.classList.add('nova-classe')</b> / <b>.remove('classe')</b>: Adiciona ou remove classes CSS, a forma preferida de alterar estilos.
+<br>
+EXEMPLO PRÁTICO:
+<div class='code-block'>// HTML: &lt;p id="status"&gt;Status: Desconectado&lt;/p&gt;
+
+// JS:
+const statusDisplay = document.getElementById('status');
+statusDisplay.textContent = "Status: Conectado";
+statusDisplay.style.color = "#00ff41"; // Verde hacker</div>
+<br>
+SUGESTÃO DE VÍDEO PARA REFORÇO:
+Assista: <a href="https://www.youtube.com/watch?v=Uft6d_pgj_s" target="_blank">O que é o DOM - Curso em Vídeo</a>`,
+                    passingScore: 4,
+                    questionPool: [{ q: "O que a sigla DOM significa?", a: "document object model" }, { q: "Qual método seleciona um elemento pelo seu ID?", a: "getelementbyid" }, { q: "Qual método seleciona o primeiro elemento que corresponde a um seletor CSS?", a: "queryselector" }, { q: "Qual propriedade altera o conteúdo de texto de um elemento?", a: "textcontent" }, { q: "Qual propriedade é usada para alterar o CSS de um elemento via JS?", a: "style" }]
+                },
+                {
+                    title: "Eventos",
+                    content: `Eventos são ações que acontecem na página (um clique, o mouse se movendo, uma tecla pressionada). Podemos 'ouvir' esses eventos e executar um código em resposta.
+<br>
+O método <b>.addEventListener()</b> é a forma moderna de fazer isso. Ele recebe dois argumentos principais:
+1. O nome do evento (ex: <code>'click'</code>, <code>'mouseover'</code>).
+2. A função a ser executada quando o evento ocorrer (callback function).
+<br>
+Essa abordagem separa claramente a estrutura (HTML) do comportamento (JS), o que é uma ótima prática.
+<br>
+EXEMPLO PRÁTICO:
+<div class='code-block'>// HTML: 
+// &lt;button id="injetar"&gt;Injetar V&iacute;rus&lt;/button&gt;
+// &lt;p id="log"&gt;&lt;/p&gt;
+
+// JS:
+const botao = document.getElementById('injetar');
+const log = document.getElementById('log');
+
+function injetarVirus() {
+  log.textContent = 'VÍRUS INJETADO COM SUCESSO!';
+  log.style.color = 'red';
+}
+
+// Adiciona o 'ouvinte' de evento de clique ao botão
+botao.addEventListener('click', injetarVirus);</div>
+<br>
+SUGESTÃO DE VÍDEO PARA REFORÇO:
+Assista: <a href="https://www.youtube.com/watch?v=G0jO8kUrg-g" target="_blank">Eventos DOM - Curso em Vídeo</a>`,
+                    passingScore: 4,
+                    questionPool: [{ q: "Qual método é usado para 'ouvir' um evento em um elemento?", a: "addeventlistener" }, { q: "Qual é o nome do evento para um clique do mouse?", a: "click" }, { q: "Qual é o nome do evento para quando o mouse passa por cima de um elemento?", a: "mouseover" }, { q: "A função que é executada em resposta a um evento é chamada de...?", a: "callback" }, { q: "Verdadeiro ou Falso: Podemos adicionar múltiplos 'event listeners' a um mesmo elemento.", a: "verdadeiro" }]
+                },
+                {
+                    title: "Funções e Condicionais",
+                    content: `<b>Funções</b> são blocos de código nomeados e reutilizáveis. Elas evitam a repetição e organizam seu script. Funções podem receber dados de entrada, chamados de parâmetros.
+<br>
+<b>Condicionais</b> (<code>if</code> / <code>else</code>) permitem que seu código tome decisões com base em condições que podem ser verdadeiras ou falsas.
+<br>
+- <b>if (condicao) { ... }</b>: Executa o bloco de código se a condição for <code>true</code>.
+- <b>else { ... }</b>: Executa o bloco de código se a condição do <code>if</code> for <code>false</code>.
+- <b>else if (outra_condicao) { ... }</b>: Permite testar múltiplas condições em sequência.
+<br>
+Operadores de comparação comuns: <code>===</code> (igual em valor e tipo), <code>!==</code> (diferente), <code>&gt;</code> (maior que), <code>&lt;</code> (menor que).
+<br>
+EXEMPLO PRÁTICO:
+<div class='code-block'>function verificarAcesso(nivel) {
+  if (nivel &gt;= 5) {
+    return "Acesso de administrador concedido.";
+  } else if (nivel &gt;= 3) {
+    return "Acesso de usuário concedido.";
+  } else {
+    return "Acesso negado. Nível insuficiente.";
+  }
+}
+
+console.log(verificarAcesso(5)); // Imprime: Acesso de administrador...
+console.log(verificarAcesso(3)); // Imprime: Acesso de usuário...
+console.log(verificarAcesso(1)); // Imprime: Acesso negado...</div>
+<br>
+SUGESTÃO DE VÍDEO PARA REFORÇO:
+Assista: <a href="https://www.youtube.com/watch?v=XdkW62tkAgU" target="_blank">Condições em JS - Curso em Vídeo</a>`,
+                    passingScore: 4,
+                    questionPool: [{ q: "Qual palavra-chave inicia a declaração de uma função?", a: "function" }, { q: "Qual estrutura de controle usamos para tomar decisões?", a: "if" }, { q: "O que o bloco `else` faz?", a: "executa se a condicao do if for falsa" }, { q: "Qual operador compara valor e tipo estritamente?", a: "===" }, { q: "Para chamar/executar uma função chamada `iniciar`, qual código usamos?", a: "iniciar()" }]
+                },
+                {
+                    title: "Arrays e Loops",
+                    content: `<b>Arrays</b> são estruturas de dados fundamentais que nos permitem armazenar listas de valores em uma única variável. Os itens em um array são ordenados e acessados por um índice numérico, começando em 0.
+<br>
+<b>Loops</b> são usados para executar repetidamente um bloco de código. São perfeitos para trabalhar com arrays, permitindo que você execute uma ação para cada item da lista.
+<br>
+- <b>Criando um Array</b>: <code>const nomes = ['Vivi', 'Neo', 'Trinity'];</code>
+- <b>Acessando um item</b>: <code>nomes[0]</code> (que retorna 'Vivi').
+- <b>Loop 'for'</b>: A forma clássica de iterar. Você controla o início, a condição de parada e o incremento.
+- <b>Loop 'forEach'</b>: Uma forma mais moderna e legível de iterar sobre arrays.
+<br>
+EXEMPLO PRÁTICO:
+<div class='code-block'>const alvos = ['Banco Central', 'Servidor Corporativo', 'Rede Secreta'];
+
+// Acessando o último item
+console.log(alvos[2]); // Imprime: 'Rede Secreta'
+
+// Iterando com um loop 'for'
+console.log("--- INICIANDO SCAN (FOR) ---");
+for (let i = 0; i < alvos.length; i++) {
+  console.log('Analisando alvo: ' + alvos[i]);
+}</div>
+<br>
+SUGESTÃO DE VÍDEO PARA REFORÇO:
+Assista: <a href="https://www.youtube.com/watch?v=XdkW62tkAgU&list=PLntvgXM11j-po7_2fBdcsH9CDwrdSgG1s&index=21" target="_blank">Repetições em JS - Curso em Vídeo</a>`,
+                    passingScore: 4,
+                    questionPool: [{ q: "Qual símbolo é usado para criar um array vazio?", a: "[]" }, { q: "Qual o índice do PRIMEIRO item em um array?", a: "0" }, { q: "Qual estrutura é usada para repetir uma ação para cada item de uma lista?", a: "loop" }, { q: "Qual a palavra-chave do loop mais clássico em programação?", a: "for" }, { q: "Se um array tem 3 itens, qual o índice do ÚLTIMO item?", a: "2" }]
+                },
+                {
+                    title: "Projeto: Mini-Decodificador",
+                    content: `Vamos juntar tudo! Sua missão é criar um mini-decodificador. Teremos um campo de texto e um botão. Ao clicar no botão, o texto do campo será 'decodificado' (vamos apenas invertê-lo) e exibido em um parágrafo.
+<br>
+<b>Etapas da Missão:</b>
+1.  <b>HTML</b>: Crie um <code>&lt;input type="text"&gt;</code> com um <code>id</code> (ex: "entrada"), um <code>&lt;button&gt;</code> com um <code>id</code> (ex: "decodificar") e um <code>&lt;p&gt;</code> com um <code>id</code> (ex: "saida") para o resultado.
+2.  <b>JS - Seleção</b>: Crie três constantes para armazenar cada um dos elementos HTML, usando <code>document.getElementById()</code>.
+3.  <b>JS - Evento</b>: Adicione um <code>.addEventListener('click', ...)</code> ao botão.
+4.  <b>JS - Lógica</b>: Dentro da função do evento:
+    a. Obtenha o texto do input usando a propriedade <code>.value</code>.
+    b. Crie a lógica para inverter o texto. (Dica: <code>texto.split('').reverse().join('')</code>).
+    c. Atualize o <code>.textContent</code> do parágrafo de saída com o resultado.
+<br>
+EXEMPLO PRÁTICO (a solução):
+<div class='code-block'>// HTML:
+// &lt;input id="entrada" type="text"&gt;
+// &lt;button id="decodificar"&gt;Decodificar&lt;/button&gt;
+// &lt;p id="saida"&gt;&lt;/p&gt;
+
+// JS:
+const input = document.getElementById('entrada');
+const botao = document.getElementById('decodificar');
+const saida = document.getElementById('saida');
+
+botao.addEventListener('click', () =&gt; {
+  const textoOriginal = input.value;
+  const textoInvertido = textoOriginal.split('').reverse().join('');
+  saida.textContent = 'Resultado: ' + textoInvertido;
+});</div>
+<br>
+SUGESTÃO DE VÍDEO PARA REFORÇO:
+Assista: <a href="https://www.youtube.com/watch?v=d_UpD-x14k8" target="_blank">Exercício Prático de JS - Curso em Vídeo</a>`,
+                    passingScore: 4,
+                    questionPool: [{ q: "No projeto, qual evento devemos ouvir no botão?", a: "click" }, { q: "Qual propriedade do elemento input nos dá o texto que o usuário digitou?", a: "value" }, { q: "Qual elemento HTML foi sugerido para mostrar o resultado?", a: "p" }, { q: "Para selecionar o botão no JS, qual método é o mais indicado se ele tiver um ID?", a: "getelementbyid" }, { q: "O que o método `.split('')` faz em uma string?", a: "transforma em array" }]
+                }
+            ]
+        };
+
+        // --- FUNÇÕES DO TERMINAL ---
+
+        function type(text, className = '') {
+            const p = document.createElement('p');
+            if (className) p.className = className;
+            p.innerHTML = text;
+            outputDiv.appendChild(p);
+            terminalDiv.scrollTop = terminalDiv.scrollHeight;
+        }
+
+        function handleInput(e) {
+            if (e.key === 'Enter') {
+                const value = inputCmd.value.trim().toLowerCase();
+                inputCmd.value = '';
+                type(`> ${value}`, 'command-history');
+                processInput(value);
+            }
+        }
+
+        // --- CONTROLE DE FLUXO PRINCIPAL ---
+        function processInput(value) {
+            promptUser.style.display = 'none';
+            switch(gameState.screen) {
+                case 'prompt_user': handleUsernameInput(value); break;
+                case 'prompt_pass': handlePasswordInput(value); break;
+                case 'main_menu': handleMainMenu(value); break;
+                case 'course_menu': handleCourseMenu(value); break;
+                case 'module_content': handleModuleContent(value); break;
+                case 'quiz': handleQuizAnswer(value); break;
+            }
+            promptUser.style.display = 'inline-block';
+        }
+
+        // --- LÓGICA DOS MENUS ---
+
+        function showMainMenu() {
+            gameState.screen = 'main_menu';
+            type(`==================================================`, "system-message");
+            type("Painel de Treinamento Principal. Escolha uma matéria:");
+            type("[1] Infiltração (HTML)");
+            type("[2] Camuflagem (CSS)");
+            type("[3] Manipulação (JS)");
+            type(" ");
+            type("Digite 'progresso' para ver seu avanço ou 'logout' para sair.");
+        }
+
+        function handleMainMenu(value) {
+            switch(value) {
+                case '1': case 'html': showCourseMenu('html'); break;
+                case '2': case 'css': showCourseMenu('css'); break;
+                case '3': case 'js': showCourseMenu('js'); break;
+                case 'progresso':
+                    showProgress();
+                    showMainMenu();
+                    break;
+                case 'logout': handleLogout(); break;
+                default:
+                    type("Opção inválida. Escolha um número de 1 a 3.", "error-message");
+                    showMainMenu();
+                    break;
+            }
+        }
+
+        function showCourseMenu(course) {
+            gameState.screen = 'course_menu';
+            gameState.currentCourse = course;
+            const userProgress = gameState.progress[course];
+            const modules = courseData[course];
+
+            type(`==================================================`, "system-message");
+            type(`Módulos de ${course.toUpperCase()}:`);
+
+            modules.forEach((module, index) => {
+                let status;
+                let className;
+                if (index < userProgress) {
+                    status = "(Concluído)";
+                    className = "success-message";
+                } else if (index === userProgress) {
+                    status = "(Disponível)";
+                    className = "";
+                } else {
+                    status = "(Bloqueado)";
+                    className = "locked-message";
+                }
+                type(`[${index + 1}] ${module.title} ${status}`, className);
+            });
+            type(" ");
+            type("Digite o número de um módulo para estudar ou 'voltar'.");
+        }
+
+        function handleCourseMenu(value) {
+            if (value === 'voltar') { showMainMenu(); return; }
+
+            const moduleIndex = parseInt(value) - 1;
+            const course = gameState.currentCourse;
+
+            if (isNaN(moduleIndex) || moduleIndex < 0 || moduleIndex >= courseData[course].length) {
+                type("Módulo inválido.", "error-message");
+                showCourseMenu(course);
+                return;
+            }
+
+            if (moduleIndex > gameState.progress[course]) {
+                type("Você precisa completar os módulos anteriores primeiro.", "error-message");
+                showCourseMenu(course);
+                return;
+            }
+
+            showModuleContent(course, moduleIndex);
+        }
+
+        function showModuleContent(course, index) {
+            gameState.screen = 'module_content';
+            gameState.currentModuleIndex = index;
+            const module = courseData[course][index];
+            type(`==================================================`, "system-message");
+            type(`Lendo Módulo ${index + 1}: ${module.title}`);
+            type(module.content); 
+            type(" ");
+            type("Digite 'iniciar prova' para testar seus conhecimentos ou 'voltar'.");
+        }
+
+        function handleModuleContent(value) {
+            if (value === 'iniciar prova') {
+                startQuiz();
+            } else if (value === 'voltar') {
+                showCourseMenu(gameState.currentCourse);
+            } else {
+                type("Comando inválido.", "error-message");
+            }
+        }
+
+
+        // --- LÓGICA DE AUTENTICAÇÃO E PROGRESSO ---
+
+        function handleUsernameInput(username) {
+            if (!username) { type("Nome de agente não pode estar vazio.", "error-message"); return; }
+            gameState.loginAttempt.username = username;
+            gameState.screen = 'prompt_pass';
+            inputCmd.type = 'password';
+            type("Digite sua senha:");
+        }
+
+        function handlePasswordInput(password) {
+            if (!password) { type("Senha não pode estar vazia.", "error-message"); startLoginSequence(); return; }
+            authenticateOrRegister(gameState.loginAttempt.username, password);
+        }
+
+        function authenticateOrRegister(user, pass) {
+            const users = JSON.parse(localStorage.getItem('gênesis_users') || '{}');
+            if (users[user]) {
+                if (users[user] === pass) loginSuccess(user, "Acesso concedido. Bem-vindo(a) de volta,");
+                else {
+                    type("Senha incorreta. Acesso negado.", "error-message");
+                    startLoginSequence();
+                }
+            } else {
+                users[user] = pass;
+                localStorage.setItem('gênesis_users', JSON.stringify(users));
+                loginSuccess(user, "Novo agente detectado. Registro concluído. Bem-vindo(a),");
+            }
+        }
+
+        function loginSuccess(user, message) {
+            gameState.loggedInUser = user;
+            loadProgress();
+            inputCmd.type = 'text';
+            type(`${message} Agente ${user}.`, "success-message");
+            showMainMenu();
+        }
+
+        function handleLogout() {
+            type(`Agente ${gameState.loggedInUser} desconectado.`, "system-message");
+            gameState.loggedInUser = null;
+            gameState.progress = {};
+            startLoginSequence();
+        }
+
+        function startLoginSequence() {
+            gameState.screen = 'prompt_user';
+            outputDiv.innerHTML = '';
+            type("INICIANDO PROJETO GÊNESIS v5.0 (Edição Mestre)...", "system-message");
+            type("Por favor, identifique-se. Digite seu nome de agente:");
+        }
+
+        function loadProgress() {
+            const saved = localStorage.getItem(`gênesis_progress_${gameState.loggedInUser}`);
+            if (saved) gameState.progress = JSON.parse(saved);
+            else gameState.progress = { html: 0, css: 0, js: 0 };
+        }
+
+        function saveProgress() {
+            localStorage.setItem(`gênesis_progress_${gameState.loggedInUser}`, JSON.stringify(gameState.progress));
+        }
+
+        function showProgress() {
+            type("RELATÓRIO DE PROGRESSO:", "system-message");
+            type(`  HTML: ${gameState.progress.html} / ${courseData.html.length} módulos concluídos.`);
+            type(`  CSS:  ${gameState.progress.css} / ${courseData.css.length} módulos concluídos.`);
+            type(`  JS:   ${gameState.progress.js} / ${courseData.js.length} módulos concluídos.`);
+        }
+
+        // --- LÓGICA DO QUIZ ---
+
+        function startQuiz() {
+            gameState.screen = 'quiz';
+            const course = gameState.currentCourse;
+            const index = gameState.currentModuleIndex;
+            const module = courseData[course][index];
+            
+            gameState.quiz = {
+                score: 0,
+                currentQuestionIndex: 0,
+                questions: shuffleArray([...module.questionPool]).slice(0, 5)
+            };
+            
+            type(`--- Iniciando Teste do Módulo ${index + 1} ---`, "system-message");
+            type(`Você precisa de ${module.passingScore} acertos para passar.`);
+            askNextQuestion();
+        }
+
+        function askNextQuestion() {
+            const { questions, currentQuestionIndex } = gameState.quiz;
+            if (currentQuestionIndex >= questions.length) {
+                endQuiz();
+                return;
+            }
+            const question = questions[currentQuestionIndex];
+            type(`Pergunta ${currentQuestionIndex + 1}/${questions.length}: ${question.q}`);
+        }
+
+        function handleQuizAnswer(answer) {
+            const { questions, currentQuestionIndex } = gameState.quiz;
+            const question = questions[currentQuestionIndex];
+            const simplifiedAnswer = question.a.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const simplifiedUserAnswer = answer.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+            if (simplifiedUserAnswer === simplifiedAnswer) {
+                type("...Correto!", "success-message");
+                gameState.quiz.score++;
+            } else {
+                type(`...Incorreto. A resposta era: ${question.a}`, "error-message");
+            }
+
+            gameState.quiz.currentQuestionIndex++;
+            askNextQuestion();
+        }
+
+        function endQuiz() {
+            const { score } = gameState.quiz;
+            const course = gameState.currentCourse;
+            const index = gameState.currentModuleIndex;
+            const module = courseData[course][index];
+
+            type("--- Teste Finalizado ---", "system-message");
+            type(`Sua pontuação: ${score}/${gameState.quiz.questions.length}`);
+
+            if (score >= module.passingScore) {
+                type("APROVADO! Módulo concluído.", "success-message");
+                if (gameState.progress[course] === index) {
+                    gameState.progress[course]++;
+                    saveProgress();
+                }
+            } else {
+                type("REPROVADO. Estude o material e tente novamente.", "error-message");
+            }
+
+            if (checkCompletion()) {
+                showCertificate();
+            } else {
+                showCourseMenu(course);
+            }
+        }
+
+        function checkCompletion() {
+            return gameState.progress.html >= courseData.html.length &&
+                   gameState.progress.css >= courseData.css.length &&
+                   gameState.progress.js >= courseData.js.length;
+        }
+
+        function showCertificate() {
+            terminalDiv.style.display = 'none';
+            certName.textContent = gameState.loggedInUser;
+            certificateContainer.style.display = 'flex';
+        }
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+
+        // --- INICIALIZAÇÃO ---
+
+        inputCmd.addEventListener('keydown', handleInput);
+        printButton.addEventListener('click', () => window.print());
+        terminalDiv.addEventListener('click', () => inputCmd.focus());
+
+        startLoginSequence();
+    </script>
+    </body>
+</html>
